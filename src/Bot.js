@@ -1,4 +1,4 @@
-import discord from 'discord.js';
+import { Client, GatewayIntentBits, Events, ChannelType } from 'discord.js';
 import logger from 'winston';
 import packageJson from '../package.json';
 import TCPServer from './TCPServer';
@@ -6,46 +6,78 @@ import TCPServer from './TCPServer';
 class Bot {
   constructor(config) {
     this.config = config;
-    this.discord = new discord.Client();
+    this.discord = new Client({
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+      ]
+    });
+    this.channels = new Map();
+    this.servers = new Map();
   }
 
-  connect() {
+  async connect() {
     logger.info('Connecting to Discord ...');
-    this.discord.login(this.config.token);
+    await this.discord.login(this.config.token);
     this.addListeners();
 
-    // Initialize TCP server
-    this.server = new TCPServer(this.config);
-    this.server.on('data', data => this.sendMessage(data));
-    this.server.start();
+    // Initialize TCP servers
+    for (const serverConfig of this.config.servers) {
+      const server = new TCPServer({
+        ...serverConfig,
+        debug: this.config.debug
+      });
+      server.on('data', data => this.handleServerMessage(data));
+      server.start();
+      this.servers.set(serverConfig.name, server);
+    }
   }
 
   addListeners() {
-    this.discord.on('ready', () => {
+    this.discord.on(Events.ClientReady, async () => {
       logger.info('Connected to Discord');
 
-      // Get the channel
-      // this.channel = this.discord.channels.find('name', this.config.channel);
-      this.channel = this.discord.channels.get(this.config.channel);
+      // Get all channels
+      for (const serverConfig of this.config.servers) {
+        try {
+          const channel = await this.discord.channels.fetch(serverConfig.channel);
+          if (!channel || channel.type !== ChannelType.GuildText) {
+            throw new Error(`Invalid channel or channel type for server ${serverConfig.name}`);
+          }
+          this.channels.set(serverConfig.channel, channel);
+        } catch (error) {
+          logger.error(`Failed to fetch channel for server ${serverConfig.name}:`, error);
+        }
+      }
     });
 
-    this.discord.on('message', message => this.parseMessage(message));
+    this.discord.on(Events.MessageCreate, message => this.parseMessage(message));
 
-    this.discord.on('warn', warning => {
+    this.discord.on(Events.Warn, warning => {
       logger.warn('Received warn event from Discord:', warning);
     });
 
-    this.discord.on('error', error => {
+    this.discord.on(Events.Error, error => {
       logger.error('Received error event from Discord:', error);
     });
   }
 
   /**
-   * Send message
+   * Handle server message
    */
-  sendMessage(message) {
-    if (this.channel) {
-      this.channel.send(message);
+  async handleServerMessage(data) {
+    const { message, channel } = data;
+    const discordChannel = this.channels.get(channel);
+    
+    if (discordChannel) {
+      try {
+        await discordChannel.send(message);
+      } catch (error) {
+        logger.error(`Failed to send message to channel ${channel}:`, error);
+      }
+    } else {
+      logger.error(`No Discord channel found for ID ${channel}`);
     }
   }
 
@@ -53,10 +85,8 @@ class Bot {
    * Parse Discord messages
    */
   parseMessage(message) {
-    // Ignore messages sent by the bot itself
-    if (message.author.id === this.discord.user.id) {
-      return;
-    }
+    // Ignore messages from bots
+    if (message.author.bot) return;
 
     // Parse command and arguments
     if (message.content.startsWith(this.config.prefix)) {
@@ -87,10 +117,14 @@ class Bot {
   /**
    * Info command
    */
-  info(args, message) {
-    message.channel.send(
-      `${packageJson.description} v${packageJson.version} - ${packageJson.url}`
-    );
+  async info(args, message) {
+    try {
+      await message.channel.send(
+        `${packageJson.description} v${packageJson.version} - ${packageJson.url}`
+      );
+    } catch (error) {
+      logger.error('Failed to send info message:', error);
+    }
   }
 }
 

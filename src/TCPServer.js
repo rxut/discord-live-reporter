@@ -3,28 +3,31 @@ import net from 'net';
 import { EventEmitter } from 'events';
 
 class TCPServer extends EventEmitter {
-  constructor(config) {
+  constructor(serverConfig) {
     super();
 
-    this.config = config;
+    this.name = serverConfig.name;
+    this.port = serverConfig.port;
+    this.password = serverConfig.password;
+    this.channel = serverConfig.channel;
+    this.debug = serverConfig.debug;
     this.authed = false;
   }
 
   start() {
-    logger.info('Starting TCP server ...');
+    logger.info(`Starting TCP server ${this.name} on port ${this.port}...`);
     this.server = net.createServer(socket => this.onClientConnected(socket));
     this.addListeners();
   }
 
   addListeners() {
     this.server.on('error', error => {
-      logger.error('Error', error);
-      // throw error;
+      logger.error(`Error on server ${this.name}:`, error);
     });
 
-    this.server.listen(this.config.port, () => {
+    this.server.listen(this.port, () => {
       const address = this.server.address();
-      logger.info(`Server listening on ${address.address}:${address.port}`);
+      logger.info(`Server ${this.name} listening on ${address.address}:${address.port}`);
     });
   }
 
@@ -72,14 +75,14 @@ class TCPServer extends EventEmitter {
 
     // Get the message string and trim new line characters
     const message = data.toString().replace(/[\n\r]*$/, '');
-    if (this.config.debug) {
+    if (this.debug) {
       logger.info(`${clientName}: ${message}`);
     }
 
     // Authentication
     if (!this.authed) {
-      if (message === `PASS ${this.config.password}`) {
-        logger.info(`${clientName} logged in.`);
+      if (message === `PASS ${this.password}`) {
+        logger.info(`${clientName} logged in to ${this.name}.`);
         this.socket.write('200\r\n'); // OK
         this.authed = true;
       } else {
@@ -90,12 +93,12 @@ class TCPServer extends EventEmitter {
 
     // Make sure the password is never exposed
     if (message.startsWith('PASS')) {
-      logger.warn('Password was sent when already authed ...');
+      logger.warn(`Password was sent when already authed on ${this.name}...`);
       return;
     }
 
-    // Emit data event
-    this.emit('data', message);
+    // Emit data event with server identification
+    this.emit('data', { message, server: this.name, channel: this.channel });
   }
 
   /**
@@ -112,7 +115,7 @@ class TCPServer extends EventEmitter {
    * Client name
    */
   clientName() {
-    return 'UT';
+    return `${this.name} Client`;
   }
 }
 
