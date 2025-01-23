@@ -1,0 +1,25 @@
+{
+  "token":  ",
+  "prefix": ".",
+  "debug": false,
+  "servers": [
+    {
+      "name": "Server 1",
+      "port": 5720,
+      "password": "password",
+      "channel": "1111111111111111111"
+    },
+    {
+      "name": "Server 2",
+      "port": 5721,
+      "password": "password",
+      "channel": "1111111111111111111"
+    },
+    {
+      "name": "Server 3",
+      "port": 5722,
+      "password": "password",
+      "channel": "1111111111111111111"
+    }
+  ]
+}

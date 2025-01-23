@@ -1,7 +1,13 @@
-# discord-reporter
+# UT99 Discord Reporter Bot
 
-UT99 Reporter Bot for [Discord](https://discordapp.com).
-This is very WIP and far from finished, so use at your own risk.
+This bot will relay information from a UT99 server onto discord.
+
+You need to generate your Token in the [Discord Developer Portal](https://discord.com/developers/applications)
+
+Also, make sure the ports you're assigning are open and that the password matches what you configured on the UT Server side.
+
+This version support multiple UT Servers through different ports and it also support auto-reconnecting in case you reset the bot.
+
 
 ## Installation
 
@@ -23,18 +29,32 @@ Create a config.json that looks like this:
 
 ```json
 {
-  "token": "DISCORD_BOT_TOKEN",
-  "channel": "CHANNEL_ID",
-  "password": "PASSWORD",
-  "port": 5000,
-  "prefix": "."
+  "token":  ",
+  "prefix": ".",
+  "debug": false,
+  "servers": [
+    {
+      "name": "Server 1",
+      "port": 5000,
+      "password": "password",
+      "channel": "1111111111111111111"
+    },
+    {
+      "name": "Server 2",
+      "port": 5001,
+      "password": "password",
+      "channel": "1111111111111111111"
+    },
+    {
+      "name": "Server 3",
+      "port": 5002,
+      "password": "password",
+      "channel": "1111111111111111111"
+    }
+  ]
 }
 ```
 
-## TODO
-
-All the things ...
-
 ## Contributions
 
-I'm are open for suggestions. Please feel free to contribute or open a new issue to post your ideas.
+This bot was originally created by sn3p https://github.com/sn3p/discord-reporter
