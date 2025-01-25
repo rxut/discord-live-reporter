@@ -8,6 +8,9 @@ Also, ensure the ports you're assigning are open and that the passwords match wh
 
 This version supports multiple UT Servers through different ports, and it also supports auto-reconnecting in case you reset the bot.
 
+## Example Discord Feed:
+
+![image](https://github.com/user-attachments/assets/17fb02c7-da9d-4350-a880-74b5c7d92391)
 
 ## Installation
 
